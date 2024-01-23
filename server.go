@@ -70,9 +70,12 @@ func (s *Server) Handler(conn net.Conn) {
 		// 重置定时器
 		case <-isLive:
 		// 定时器
-		case <-time.After(time.Second * 10):
-			user.SendMsg("超时下线")
+		case <-time.After(time.Hour * 10):
+			user.SendMsg("超时下线\n")
 			// 资源清理
+			s.MapLock.Lock()
+			delete(s.OnlineMap, user.Name)
+			s.MapLock.Unlock()
 			close(user.Chan)
 			conn.Close()
 			return

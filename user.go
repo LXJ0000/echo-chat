@@ -41,18 +41,36 @@ func (u *User) OffLine() {
 }
 
 func (u *User) SendMsg(msg string) {
-	u.Conn.Write([]byte(msg))
+	u.Conn.Write([]byte(strings.Join([]string{msg, "\n"}, "")))
 }
 
 func (u *User) DoMsg(msg string) {
 	if msg == "who" {
 		u.Server.MapLock.Lock()
 		for _, user := range u.Server.OnlineMap {
-			onlineMsg := strings.Join([]string{"[", user.Addr, "]", user.Name, ": 在线 ...\n"}, "")
+			onlineMsg := strings.Join([]string{"[", user.Addr, "]", user.Name, ": 在线 ..."}, "")
 			u.SendMsg(onlineMsg)
 		}
 		u.Server.MapLock.Unlock()
+	} else if len(msg) > 3 && msg[:3] == "to|" {
+		// to|jannan|content
+		// 1. get recv content
+		split := strings.Split(msg, "|")
+		if len(split) < 3 || split[1] == "" || split[2] == "" {
+			u.SendMsg("消息格式有误，应该为 \"to|recv|content\" 格式。")
+			return
+		}
+		recv, content := split[1], split[2]
+		// 2. get user
+		recvUser, ok := u.Server.OnlineMap[recv]
+		if !ok {
+			u.SendMsg("用户名不存在")
+			return
+		}
+		// 3. send msg
+		recvUser.SendMsg(strings.Join([]string{u.Name, "对你说：", content}, ""))
 	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		// rename|jannan
 		newName := msg[7:]
 		u.Server.MapLock.Lock()
 		if _, ok := u.Server.OnlineMap[newName]; ok {
@@ -61,7 +79,7 @@ func (u *User) DoMsg(msg string) {
 			delete(u.Server.OnlineMap, u.Name)
 			u.Server.OnlineMap[newName] = u
 			u.Name = newName
-			u.SendMsg(strings.Join([]string{"用户名修改成功:", u.Name, "\n"}, ""))
+			u.SendMsg(strings.Join([]string{"用户名修改成功:", u.Name}, ""))
 		}
 		u.Server.MapLock.Unlock()
 	} else {
