@@ -40,7 +40,6 @@ func (u *User) OffLine() {
 	u.Server.BroadCast(u, "User OffLine")
 }
 
-// 
 func (u *User) SendMsg(msg string) {
 	u.Conn.Write([]byte(msg))
 }
@@ -51,6 +50,18 @@ func (u *User) DoMsg(msg string) {
 		for _, user := range u.Server.OnlineMap {
 			onlineMsg := strings.Join([]string{"[", user.Addr, "]", user.Name, ": 在线 ...\n"}, "")
 			u.SendMsg(onlineMsg)
+		}
+		u.Server.MapLock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		newName := msg[7:]
+		u.Server.MapLock.Lock()
+		if _, ok := u.Server.OnlineMap[newName]; ok {
+			u.SendMsg("用户名已存在")
+		} else {
+			delete(u.Server.OnlineMap, u.Name)
+			u.Server.OnlineMap[newName] = u
+			u.Name = newName
+			u.SendMsg(strings.Join([]string{"用户名修改成功:", u.Name, "\n"}, ""))
 		}
 		u.Server.MapLock.Unlock()
 	} else {
