@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -34,6 +35,9 @@ func (s *Server) Handler(conn net.Conn) {
 
 	user.Online()
 
+	//
+	isLive := make(chan bool)
+
 	go func() {
 		buf := make([]byte, 4096)
 
@@ -55,11 +59,26 @@ func (s *Server) Handler(conn net.Conn) {
 			msg := string(buf[:n-1])
 
 			user.DoMsg(msg)
+
+			isLive <- true
 		}
 	}()
 
 	//阻塞,避免断开连接
-	select {}
+	for {
+		select {
+		// 重置定时器
+		case <-isLive:
+		// 定时器
+		case <-time.After(time.Second * 10):
+			user.SendMsg("超时下线")
+			// 资源清理
+			close(user.Chan)
+			conn.Close()
+			return
+		}
+	}
+
 }
 
 // BroadCast 接收客户端消息
