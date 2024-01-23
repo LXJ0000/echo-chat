@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -34,7 +35,31 @@ func (s *Server) Handler(conn net.Conn) {
 	s.OnlineMap[user.Name] = user
 	s.MapLock.Unlock()
 
-	s.BroadCast(user, "用户已上线")
+	s.BroadCast(user, "User OnLine")
+
+	go func() {
+		buf := make([]byte, 4096)
+
+		for {
+			n, err := conn.Read(buf)
+
+			// 客户端主动关闭连接
+			if n == 0 {
+				s.BroadCast(user, "User OffLine")
+				return 
+			}
+
+			if err != nil && err != io.EOF {
+				fmt.Println("Conn Read error: ", err)
+				return
+			}
+
+			// get user's msg and remove '\n'
+			msg := string(buf[:n-1])
+
+			s.BroadCast(user, msg)
+		}
+	}()
 
 	//阻塞,避免断开连接
 	select {}
