@@ -30,12 +30,9 @@ func NewServer(ip string, port int) *Server {
 // Handler ... 处理当前连接的业务
 func (s *Server) Handler(conn net.Conn) {
 
-	user := NewUser(conn)
-	s.MapLock.Lock()
-	s.OnlineMap[user.Name] = user
-	s.MapLock.Unlock()
+	user := NewUser(conn, s)
 
-	s.BroadCast(user, "User OnLine")
+	user.Online()
 
 	go func() {
 		buf := make([]byte, 4096)
@@ -45,8 +42,8 @@ func (s *Server) Handler(conn net.Conn) {
 
 			// 客户端主动关闭连接
 			if n == 0 {
-				s.BroadCast(user, "User OffLine")
-				return 
+				user.OffLine()
+				return
 			}
 
 			if err != nil && err != io.EOF {
