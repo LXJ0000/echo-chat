@@ -3,24 +3,59 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
+	"sync"
 )
 
 type Server struct {
 	Ip   string
 	Port int
+	// 在线用户
+	OnlineMap map[string]*User
+	MapLock   sync.RWMutex
+	//接收消息用于广播
+	MessageChan chan string
 }
 
 // NewServer Server 创建
 func NewServer(ip string, port int) *Server {
 	return &Server{
-		Ip:   ip,
-		Port: port,
-	}
+		Ip:          ip,
+		Port:        port,
+		OnlineMap:   make(map[string]*User),
+		MessageChan: make(chan string)}
 }
 
+// Handler ... 处理当前连接的业务
 func (s *Server) Handler(conn net.Conn) {
-	//	... 当前连接的业务
-	fmt.Println("连接建立成功")
+
+	user := NewUser(conn)
+	s.MapLock.Lock()
+	s.OnlineMap[user.Name] = user
+	s.MapLock.Unlock()
+
+	s.BroadCast(user, "用户已上线")
+
+	//阻塞,避免断开连接
+	select {}
+}
+
+// BroadCast 接收客户端消息
+func (s *Server) BroadCast(user *User, msg string) {
+	sendMsg := strings.Join([]string{"[", user.Addr, "]", user.Name, ": ", msg}, "")
+	s.MessageChan <- sendMsg
+}
+
+func (s *Server) ListenMsg() {
+	for {
+		msg := <-s.MessageChan
+
+		s.MapLock.Lock()
+		for _, user := range s.OnlineMap {
+			user.Chan <- msg
+		}
+		s.MapLock.Unlock()
+	}
 }
 
 // Run Server 启动
@@ -30,6 +65,10 @@ func (s *Server) Run() {
 	if err != nil {
 		fmt.Println("net.Listen error: ", err)
 	}
+
+	//启动监听Msg广播
+	go s.ListenMsg()
+
 	//	2. defer close
 	defer func(listen net.Listener) {
 		_ = listen.Close()
