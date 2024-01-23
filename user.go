@@ -40,6 +40,10 @@ func (u *User) OffLine() {
 	u.Server.BroadCast(u, "User OffLine")
 }
 
+func (u *User) DoMsg(msg string) {
+	u.Server.BroadCast(u, msg)
+}
+
 // ListenMsg 监听服务器发来的消息
 func (u *User) ListenMsg() {
 	for {

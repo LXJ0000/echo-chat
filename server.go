@@ -54,7 +54,7 @@ func (s *Server) Handler(conn net.Conn) {
 			// get user's msg and remove '\n'
 			msg := string(buf[:n-1])
 
-			s.BroadCast(user, msg)
+			user.DoMsg(msg)
 		}
 	}()
 
