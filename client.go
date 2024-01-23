@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -13,6 +15,7 @@ type Client struct {
 	ServerPort int
 	Conn       net.Conn
 	Name       string
+	Flag       int
 }
 
 func NewClient(serverIP string, serverPort int) *Client {
@@ -25,7 +28,64 @@ func NewClient(serverIP string, serverPort int) *Client {
 		ServerIP:   serverIP,
 		ServerPort: serverPort,
 		Conn:       conn,
+		Flag:       -1,
 	}
+}
+
+func (c *Client) menu() bool {
+	var flag int
+
+	fmt.Println("1.公聊模式")
+	fmt.Println("2.私聊模式")
+	fmt.Println("3.更新用户名")
+	fmt.Println("0.退出")
+
+	fmt.Scanln(&flag)
+
+	if flag >= 0 && flag <= 3 {
+		c.Flag = flag
+		return true
+	} else {
+		fmt.Println(">>>>请输入合法范围内的数字<<<<")
+		return false
+	}
+
+}
+
+func (c *Client) UpdateName() bool {
+	fmt.Println(">>>>请输入用户名:")
+	fmt.Scanln(&c.Name)
+
+	sendMsg := "rename|" + c.Name + "\n"
+	_, err := c.Conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn.Write err:", err)
+		return false
+	}
+
+	return true
+}
+
+func (c *Client) Run() {
+	for c.Flag != 0 {
+		for c.menu() == false {
+		}
+
+		switch c.Flag {
+		case 1:
+			fmt.Println("1:todo")
+		case 2:
+			fmt.Println("2:todo")
+		case 3:
+			c.UpdateName()
+		}
+	}
+}
+
+// 处理server回应的消息， 直接显示到标准输出即可
+func (client *Client) DealResponse() {
+	//一旦client.conn有数据，就直接copy到stdout标准输出上, 永久阻塞监听
+	io.Copy(os.Stdout, client.Conn)
 }
 
 var (
@@ -48,6 +108,8 @@ func main() {
 		return
 	}
 
+	go client.DealResponse()
+
 	fmt.Println("==========> 连接服务器成功...")
-	select {}
+	client.Run()
 }
