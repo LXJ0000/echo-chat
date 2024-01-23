@@ -40,8 +40,23 @@ func (u *User) OffLine() {
 	u.Server.BroadCast(u, "User OffLine")
 }
 
+// 
+func (u *User) SendMsg(msg string) {
+	u.Conn.Write([]byte(msg))
+}
+
 func (u *User) DoMsg(msg string) {
-	u.Server.BroadCast(u, msg)
+	if msg == "who" {
+		u.Server.MapLock.Lock()
+		for _, user := range u.Server.OnlineMap {
+			onlineMsg := strings.Join([]string{"[", user.Addr, "]", user.Name, ": 在线 ...\n"}, "")
+			u.SendMsg(onlineMsg)
+		}
+		u.Server.MapLock.Unlock()
+	} else {
+		u.Server.BroadCast(u, msg)
+	}
+
 }
 
 // ListenMsg 监听服务器发来的消息
