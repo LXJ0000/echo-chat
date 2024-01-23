@@ -52,18 +52,31 @@ func (c *Client) menu() bool {
 
 }
 
-func (c *Client) UpdateName() bool {
+func (c *Client) UpdateName() {
 	fmt.Println(">>>>请输入用户名:")
 	fmt.Scanln(&c.Name)
 
 	sendMsg := "rename|" + c.Name + "\n"
 	_, err := c.Conn.Write([]byte(sendMsg))
 	if err != nil {
-		fmt.Println("conn.Write err:", err)
-		return false
+		fmt.Println("conn.Write error: ", err)
 	}
+}
 
-	return true
+func (c *Client) PublishChat() {
+	var sendMsg string
+	fmt.Println(">>>>请输入聊天内容,exit退出.")
+	fmt.Scanln(&sendMsg)
+
+	for sendMsg != "exit" {
+		_, err := c.Conn.Write([]byte(sendMsg + "\n"))
+		if err != nil {
+			fmt.Println("conn.Write error: ", err)
+			return
+		}
+		sendMsg = ""
+		fmt.Scanln(&sendMsg)
+	}
 }
 
 func (c *Client) Run() {
@@ -73,7 +86,7 @@ func (c *Client) Run() {
 
 		switch c.Flag {
 		case 1:
-			fmt.Println("1:todo")
+			c.PublishChat()
 		case 2:
 			fmt.Println("2:todo")
 		case 3:
