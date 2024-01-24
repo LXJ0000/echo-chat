@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -65,8 +66,12 @@ func (c *Client) UpdateName() {
 
 func (c *Client) PublishChat() {
 	var chatMsg string
+
 	fmt.Println(">>>>请输入聊天内容,exit退出.")
-	fmt.Scanln(&chatMsg)
+
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	chatMsg = scanner.Text()
 
 	for chatMsg != "exit" {
 		if len(chatMsg) > 0 {
@@ -78,7 +83,8 @@ func (c *Client) PublishChat() {
 			}
 		}
 		chatMsg = ""
-		fmt.Scanln(&chatMsg)
+		scanner.Scan()
+		chatMsg = scanner.Text()
 	}
 }
 
@@ -100,7 +106,9 @@ func (c *Client) PrivateChat() {
 	fmt.Scanln(&recvName)
 	for recvName != "exit" {
 		fmt.Println(">>>>请输入聊天内容,exit退出.")
-		fmt.Scanln(&chatMsg)
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		chatMsg = scanner.Text()
 		for chatMsg != "exit" {
 			if len(chatMsg) > 0 {
 				sendMsg := strings.Join([]string{"to|", recvName, "|", chatMsg, "\n"}, "")
@@ -112,7 +120,8 @@ func (c *Client) PrivateChat() {
 			}
 			chatMsg = ""
 			fmt.Println(">>>>请输入聊天内容,exit退出.")
-			fmt.Scanln(&chatMsg)
+			scanner.Scan()
+			chatMsg = scanner.Text()
 		}
 		c.SelectUser()
 
@@ -137,7 +146,7 @@ func (c *Client) Run() {
 	}
 }
 
-// 处理server回应的消息， 直接显示到标准输出即可
+// DealResponse 处理server回应的消息， 直接显示到标准输出即可
 func (c *Client) DealResponse() {
 	//一旦client.conn有数据，就直接copy到stdout标准输出上, 永久阻塞监听
 	io.Copy(os.Stdout, c.Conn)
@@ -151,8 +160,8 @@ var (
 func init() {
 	// 命令行解析
 	// ./client -p 127.0.0.1 -port 8888
-	flag.StringVar(&serverIP, "ip", "127.0.0.1", "服务器IP，默认127.0.0.1")
-	flag.IntVar(&serverPort, "port", 8888, "服务器端口，默认8888")
+	flag.StringVar(&serverIP, "ip", "127.0.0.1", "服务器IP,默认127.0.0.1")
+	flag.IntVar(&serverPort, "port", 8888, "服务器端口,默认8888")
 }
 
 func main() {
