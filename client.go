@@ -64,18 +64,60 @@ func (c *Client) UpdateName() {
 }
 
 func (c *Client) PublishChat() {
-	var sendMsg string
+	var chatMsg string
 	fmt.Println(">>>>请输入聊天内容,exit退出.")
-	fmt.Scanln(&sendMsg)
+	fmt.Scanln(&chatMsg)
 
-	for sendMsg != "exit" {
-		_, err := c.Conn.Write([]byte(sendMsg + "\n"))
-		if err != nil {
-			fmt.Println("conn.Write error: ", err)
-			return
+	for chatMsg != "exit" {
+		if len(chatMsg) > 0 {
+			sendMsg := chatMsg + "\n"
+			_, err := c.Conn.Write([]byte(sendMsg))
+			if err != nil {
+				fmt.Println("conn.Write error: ", err)
+				return
+			}
 		}
-		sendMsg = ""
-		fmt.Scanln(&sendMsg)
+		chatMsg = ""
+		fmt.Scanln(&chatMsg)
+	}
+}
+
+// SelectUser 查询当前在线用户
+func (c *Client) SelectUser() {
+	sendMsg := "who\n"
+	_, err := c.Conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn.Write error: ", err)
+	}
+}
+
+func (c *Client) PrivateChat() {
+	var recvName string
+	var chatMsg string
+
+	c.SelectUser()
+	fmt.Println(">>>>请输入聊天对象用户名,exit退出.")
+	fmt.Scanln(&recvName)
+	for recvName != "exit" {
+		fmt.Println(">>>>请输入聊天内容,exit退出.")
+		fmt.Scanln(&chatMsg)
+		for chatMsg != "exit" {
+			if len(chatMsg) > 0 {
+				sendMsg := strings.Join([]string{"to|", recvName, "|", chatMsg, "\n"}, "")
+				_, err := c.Conn.Write([]byte(sendMsg))
+				if err != nil {
+					fmt.Println("conn.Write error: ", err)
+					return
+				}
+			}
+			chatMsg = ""
+			fmt.Println(">>>>请输入聊天内容,exit退出.")
+			fmt.Scanln(&chatMsg)
+		}
+		c.SelectUser()
+
+		fmt.Println(">>>>请输入聊天对象用户名,exit退出.")
+		fmt.Scanln(&recvName)
 	}
 }
 
@@ -88,7 +130,7 @@ func (c *Client) Run() {
 		case 1:
 			c.PublishChat()
 		case 2:
-			fmt.Println("2:todo")
+			c.PrivateChat()
 		case 3:
 			c.UpdateName()
 		}
@@ -96,9 +138,9 @@ func (c *Client) Run() {
 }
 
 // 处理server回应的消息， 直接显示到标准输出即可
-func (client *Client) DealResponse() {
+func (c *Client) DealResponse() {
 	//一旦client.conn有数据，就直接copy到stdout标准输出上, 永久阻塞监听
-	io.Copy(os.Stdout, client.Conn)
+	io.Copy(os.Stdout, c.Conn)
 }
 
 var (
